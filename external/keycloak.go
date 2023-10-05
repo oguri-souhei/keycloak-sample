@@ -2,14 +2,17 @@ package external
 
 import (
 	"context"
+	"errors"
 	"keycloak-sample/params"
 
 	"github.com/Nerzal/gocloak/v13"
 )
 
 const (
-	keycloakHost = "http://localhost:3000"
-	realmName    = "myrealm"
+	KeycloakHost = "http://localhost:3000"
+	RealmName    = "myrealm"
+	clientID     = "myclient"
+	clientSecret = ""
 )
 
 var client *KeycloakClient
@@ -24,7 +27,7 @@ func GetKeycloakClient() *KeycloakClient {
 	}
 
 	client = &KeycloakClient{
-		client: gocloak.NewClient(keycloakHost),
+		client: gocloak.NewClient(KeycloakHost),
 	}
 
 	return client
@@ -43,8 +46,28 @@ func (k *KeycloakClient) SignUp(ctx context.Context, p params.SignUp) error {
 	}
 
 	// sign up
-	if _, err := k.client.CreateUser(ctx, token.AccessToken, realmName, req); err != nil {
+	if _, err := k.client.CreateUser(ctx, token.AccessToken, RealmName, req); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (k *KeycloakClient) Login(ctx context.Context, p params.Login) (*gocloak.JWT, error) {
+	return k.client.Login(ctx, clientID, clientSecret, RealmName, p.Username, p.Password)
+}
+
+// 認証情報が正しいかどうかを確認する
+func (k *KeycloakClient) ValidateToken(ctx context.Context, token *gocloak.JWT) error {
+	if token == nil {
+		return errors.New("unauthorized: token is nil")
+	}
+
+	userInfo, err := k.client.GetUserInfo(ctx, token.AccessToken, RealmName)
+	if err != nil {
+		return err
+	}
+	if userInfo == nil {
+		return errors.New("unauthorized")
 	}
 	return nil
 }
