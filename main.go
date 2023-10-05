@@ -2,16 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"keycloak-sample/external"
+	"keycloak-sample/auth"
 	"keycloak-sample/params"
 	"log"
 	"net/http"
-
-	"github.com/Nerzal/gocloak/v13"
-)
-
-var (
-	token *gocloak.JWT
 )
 
 func main() {
@@ -25,6 +19,7 @@ func main() {
 }
 
 // GET /
+// NOTE: ログインしていない場合はリダイレクトするようにする
 func handleRoot(w http.ResponseWriter, r *http.Request) {
 	// GET 以外は無視
 	if r.Method != http.MethodGet {
@@ -32,15 +27,8 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// XXX: ログインしていない場合（やばいコード）
-	// if token == nil {
-	// 	// NOTE: redirectするようにしたい…！
-	// 	http.Error(w, "Unauthorized", http.StatusUnauthorized)
-	// 	return
-	// }
-
 	// 認証情報の検証
-	if err := external.GetKeycloakClient().ValidateToken(r.Context(), token); err != nil {
+	if err := auth.GetKeycloakClient().ValidateToken(r.Context()); err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
@@ -59,6 +47,7 @@ func handleSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// KeycloakにPOSTするパラメータを作成
 	var form params.SignUp
 	if err := json.NewDecoder(r.Body).Decode(&form); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -66,7 +55,7 @@ func handleSignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// keycloakコンテナにユーザー登録
-	if err := external.GetKeycloakClient().SignUp(r.Context(), form); err != nil {
+	if err := auth.GetKeycloakClient().SignUp(r.Context(), form); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -80,20 +69,18 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// KeycloakにPOSTするパラメータを作成
 	var form params.Login
 	if err := json.NewDecoder(r.Body).Decode(&form); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	client := auth.GetKeycloakClient()
+
 	// keycloakコンテナにユーザー登録
-	got, err := external.GetKeycloakClient().Login(r.Context(), form)
-	if err != nil {
+	if err := client.Login(r.Context(), form); err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-
-	// tokenを保持
-	// NOTE: 本来ならcontextなどに保持すべきか
-	token = got
 }
