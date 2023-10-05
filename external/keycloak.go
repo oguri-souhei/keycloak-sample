@@ -38,9 +38,6 @@ func (k *KeycloakClient) SignUp(ctx context.Context, p params.SignUp) error {
 
 	// create params
 	req := gocloak.User{
-		// FirstName: gocloak.StringP(p.FirstName),
-		// LastName:  gocloak.StringP(p.LastName),
-		// Email:     gocloak.StringP(p.Email),
 		Username: gocloak.StringP(p.Username),
 		Enabled:  gocloak.BoolP(true),
 	}
